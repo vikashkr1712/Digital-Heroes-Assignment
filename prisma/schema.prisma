@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  VISITOR
+  SUBSCRIBER
+  ADMIN
+}
+
+enum SubscriptionPlan {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  LAPSED
+}
+
+enum DrawLogic {
+  RANDOM
+  ALGORITHMIC
+}
+
+enum DrawStatus {
+  SIMULATED
+  PUBLISHED
+}
+
+enum MatchTier {
+  THREE
+  FOUR
+  FIVE
+}
+
+enum WinnerVerificationStatus {
+  NOT_SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WinnerPaymentStatus {
+  PENDING
+  PAID
+}
+
+enum DonationType {
+  SUBSCRIPTION
+  INDEPENDENT
+}
+
+enum NotificationType {
+  SYSTEM
+  DRAW_RESULT
+  WINNER_ALERT
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String
+  passwordHash      String
+  role              UserRole @default(VISITOR)
+  charityPercentage Int      @default(10)
+  charityId         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  charity            Charity?       @relation(fields: [charityId], references: [id], onDelete: SetNull)
+  subscription       Subscription?
+  scores             ScoreEntry[]
+  donations          Donation[]
+  notifications      Notification[]
+  winners            DrawWinner[]   @relation("WinnerUser")
+  reviewedWinners    DrawWinner[]   @relation("WinnerReviewedBy")
+  executedDraws      Draw[]         @relation("DrawExecutedBy")
+
+  @@index([role])
+}
+
+model Subscription {
+  id                  String             @id @default(cuid())
+  userId              String             @unique
+  plan                SubscriptionPlan
+  status              SubscriptionStatus @default(ACTIVE)
+  amountCents         Int
+  prizePoolPercentage Int                @default(50)
+  gatewayProvider     String             @default("stripe")
+  gatewayReference    String
+  startedAt           DateTime           @default(now())
+  renewalAt           DateTime
+  canceledAt          DateTime?
+  updatedAt           DateTime           @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([status, renewalAt])
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  subscriptionId    String
+  amountCents       Int
+  currency          String   @default("INR")
+  status            String   @default("SUCCESS")
+  providerReference String
+  paidAt            DateTime @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, paidAt])
+}
+
+model ScoreEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  score     Int
+  scoreDate DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scoreDate])
+  @@index([userId, scoreDate(sort: Desc)])
+}
+
+model Charity {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  description   String
+  imageUrl      String?
+  websiteUrl    String?
+  upcomingEvent String?
+  featured      Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users     User[]
+  donations Donation[]
+
+  @@index([featured, isActive])
+}
+
+model Donation {
+  id         String       @id @default(cuid())
+  userId     String?
+  charityId  String
+  amountCents Int
+  percentage Int?
+  type       DonationType
+  monthKey   String?
+  createdAt  DateTime     @default(now())
+
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  charity Charity @relation(fields: [charityId], references: [id], onDelete: Cascade)
+
+  @@index([charityId, createdAt])
+  @@index([monthKey])
+}
+
+model Draw {
+  id                        String     @id @default(cuid())
+  monthKey                  String
+  logic                     DrawLogic
+  status                    DrawStatus @default(SIMULATED)
+  poolTotalCents            Int
+  tier5Cents                Int
+  tier4Cents                Int
+  tier3Cents                Int
+  rolloverFromPreviousCents Int        @default(0)
+  participantCount          Int        @default(0)
+  simulatedAt               DateTime   @default(now())
+  publishedAt               DateTime?
+  notes                     String?
+  metricsJson               String?
+  executedById              String
+
+  executedBy User         @relation("DrawExecutedBy", fields: [executedById], references: [id], onDelete: Restrict)
+  numbers    DrawNumber[]
+  winners    DrawWinner[]
+
+  @@index([monthKey, status])
+  @@index([publishedAt])
+}
+
+model DrawNumber {
+  id       String @id @default(cuid())
+  drawId   String
+  position Int
+  value    Int
+
+  draw Draw @relation(fields: [drawId], references: [id], onDelete: Cascade)
+
+  @@unique([drawId, position])
+  @@index([drawId, value])
+}
+
+model DrawWinner {
+  id                 String                   @id @default(cuid())
+  drawId             String
+  userId             String
+  matchTier          MatchTier
+  matchedCount       Int
+  prizeCents         Int
+  verificationStatus WinnerVerificationStatus @default(NOT_SUBMITTED)
+  paymentStatus      WinnerPaymentStatus      @default(PENDING)
+  proofUrl           String?
+  reviewNote         String?
+  reviewedById       String?
+  reviewedAt         DateTime?
+  paidAt             DateTime?
+  createdAt          DateTime                 @default(now())
+
+  draw       Draw  @relation(fields: [drawId], references: [id], onDelete: Cascade)
+  user       User  @relation("WinnerUser", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("WinnerReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([drawId, matchTier])
+  @@index([userId, paymentStatus])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
