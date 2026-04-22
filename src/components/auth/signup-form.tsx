@@ -29,6 +29,7 @@ export function SignupForm({ charities }: SignupFormProps) {
   const [charityPercentage, setCharityPercentage] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const hasCharities = charities.length > 0;
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -45,7 +46,7 @@ export function SignupForm({ charities }: SignupFormProps) {
           name,
           email,
           password,
-          charityId: charityId || undefined,
+          charityId: hasCharities ? charityId || undefined : undefined,
           charityPercentage,
         }),
       });
@@ -106,20 +107,22 @@ export function SignupForm({ charities }: SignupFormProps) {
         />
       </label>
 
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium text-slate-700">Preferred charity</span>
-        <select
-          value={charityId}
-          onChange={(event) => setCharityId(event.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none transition focus:border-[#0f2a2a]"
-        >
-          {charities.map((charity) => (
-            <option key={charity.id} value={charity.id}>
-              {charity.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      {hasCharities ? (
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Preferred charity</span>
+          <select
+            value={charityId}
+            onChange={(event) => setCharityId(event.target.value)}
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none transition focus:border-[#0f2a2a]"
+          >
+            {charities.map((charity) => (
+              <option key={charity.id} value={charity.id}>
+                {charity.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
 
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-slate-700">

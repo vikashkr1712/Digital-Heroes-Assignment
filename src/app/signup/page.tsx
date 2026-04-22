@@ -4,11 +4,18 @@ import { SignupForm } from "@/components/auth/signup-form";
 import { prisma } from "@/lib/prisma";
 
 export default async function SignupPage() {
-  const charities = await prisma.charity.findMany({
-    where: { isActive: true },
-    orderBy: [{ featured: "desc" }, { name: "asc" }],
-    select: { id: true, name: true },
-  });
+  let charities: Array<{ id: string; name: string }> = [];
+  let charityDirectoryAvailable = true;
+
+  try {
+    charities = await prisma.charity.findMany({
+      where: { isActive: true },
+      orderBy: [{ featured: "desc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    });
+  } catch {
+    charityDirectoryAvailable = false;
+  }
 
   return (
     <main className="mx-auto w-full max-w-md px-4 py-10 sm:px-6">
@@ -18,6 +25,12 @@ export default async function SignupPage() {
         <p className="mt-2 text-sm text-slate-600">
           Choose your charity, set your contribution, and start your monthly score-to-reward journey.
         </p>
+
+        {!charityDirectoryAvailable ? (
+          <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Charity directory is temporarily unavailable. You can still create your account and pick a charity later from your dashboard.
+          </p>
+        ) : null}
 
         <div className="mt-6">
           <SignupForm charities={charities} />

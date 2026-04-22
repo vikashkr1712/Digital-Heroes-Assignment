@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getCharityBySlug } from "@/lib/services/charity-service";
+import { getCharityBySlugPublic } from "@/lib/services/charity-service";
 
 type CharityProfilePageProps = {
   params: Promise<{
@@ -11,7 +11,7 @@ type CharityProfilePageProps = {
 
 export default async function CharityProfilePage({ params }: CharityProfilePageProps) {
   const { slug } = await params;
-  const charity = await getCharityBySlug(slug);
+  const charity = await getCharityBySlugPublic(slug);
 
   if (!charity) {
     notFound();

@@ -79,12 +79,16 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     return null;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.sub },
-    select: sessionUserSelect,
-  });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.sub },
+      select: sessionUserSelect,
+    });
 
-  return user;
+    return user;
+  } catch {
+    return null;
+  }
 }
 
 export async function getCurrentUserFromRequest(
@@ -95,12 +99,16 @@ export async function getCurrentUserFromRequest(
     return null;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.sub },
-    select: sessionUserSelect,
-  });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.sub },
+      select: sessionUserSelect,
+    });
 
-  return user;
+    return user;
+  } catch {
+    return null;
+  }
 }
 
 export async function isAdminRequest(request: NextRequest): Promise<boolean> {

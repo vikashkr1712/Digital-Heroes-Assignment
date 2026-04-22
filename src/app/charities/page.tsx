@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { listCharities } from "@/lib/services/charity-service";
+import { listCharitiesPublic } from "@/lib/services/charity-service";
 
 type CharitiesPageProps = {
   searchParams: Promise<{
@@ -13,7 +13,7 @@ export default async function CharitiesPage({ searchParams }: CharitiesPageProps
   const params = await searchParams;
   const query = params.q?.trim() || "";
   const featuredOnly = params.featured === "true";
-  const charities = await listCharities(query || undefined, { featuredOnly });
+  const charities = await listCharitiesPublic(query || undefined, { featuredOnly });
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
